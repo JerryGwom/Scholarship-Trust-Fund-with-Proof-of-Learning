@@ -3,9 +3,11 @@
 (define-constant ERR-INSUFFICIENT-FUNDS (err u102))
 (define-constant ERR-ALREADY-CLAIMED (err u103))
 (define-constant ERR-NOT-ENROLLED (err u104))
+(define-constant ERR-MILESTONE-EXPIRED (err u105))
 
 (define-data-var fund-pool uint u0)
 (define-data-var admin principal tx-sender)
+(define-data-var expired-fund-pool uint u0)
 
 (define-map Students 
     principal 
@@ -17,7 +19,8 @@
 (define-map Milestones
     uint 
     {reward: uint,
-     required-proof: (string-ascii 64)}
+     required-proof: (string-ascii 64),
+     deadline: uint}
 )
 
 (define-map CompletedMilestones
@@ -26,10 +29,10 @@
      proof-hash: (string-ascii 64)}
 )
 
-(define-public (initialize-milestone (milestone-id uint) (reward uint) (required-proof (string-ascii 64)))
+(define-public (initialize-milestone (milestone-id uint) (reward uint) (required-proof (string-ascii 64)) (deadline uint))
     (begin
         (asserts! (is-eq tx-sender (var-get admin)) ERR-NOT-AUTHORIZED)
-        (ok (map-set Milestones milestone-id {reward: reward, required-proof: required-proof}))
+        (ok (map-set Milestones milestone-id {reward: reward, required-proof: required-proof, deadline: deadline}))
     )
 )
 
@@ -56,6 +59,7 @@
         (milestone-data (unwrap! (map-get? Milestones milestone-id) ERR-INVALID-MILESTONE))
     )
         (begin
+            (asserts! (< stacks-block-height (get deadline milestone-data)) ERR-MILESTONE-EXPIRED)
             (asserts! (not (get completed (default-to {completed: false, proof-hash: ""} 
                 (map-get? CompletedMilestones {student: tx-sender, milestone-id: milestone-id})))) ERR-ALREADY-CLAIMED)
             
@@ -103,4 +107,39 @@
 
 (define-read-only (get-fund-balance)
     (var-get fund-pool)
+)
+
+(define-public (expire-milestone (milestone-id uint))
+    (let (
+        (milestone-data (unwrap! (map-get? Milestones milestone-id) ERR-INVALID-MILESTONE))
+    )
+        (begin
+            (asserts! (is-eq tx-sender (var-get admin)) ERR-NOT-AUTHORIZED)
+            (asserts! (>= stacks-block-height (get deadline milestone-data)) ERR-INVALID-MILESTONE)
+            (var-set expired-fund-pool (+ (var-get expired-fund-pool) (get reward milestone-data)))
+            (map-delete Milestones milestone-id)
+            (ok (get reward milestone-data))
+        )
+    )
+)
+
+(define-public (redistribute-expired-funds (recipient principal) (amount uint))
+    (begin
+        (asserts! (is-eq tx-sender (var-get admin)) ERR-NOT-AUTHORIZED)
+        (asserts! (<= amount (var-get expired-fund-pool)) ERR-INSUFFICIENT-FUNDS)
+        (try! (as-contract (stx-transfer? amount tx-sender recipient)))
+        (var-set expired-fund-pool (- (var-get expired-fund-pool) amount))
+        (ok amount)
+    )
+)
+
+(define-read-only (get-expired-fund-balance)
+    (var-get expired-fund-pool)
+)
+
+(define-read-only (is-milestone-expired (milestone-id uint))
+    (match (map-get? Milestones milestone-id)
+        milestone-data (>= stacks-block-height (get deadline milestone-data))
+        true
+    )
 )
