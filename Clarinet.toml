@@ -1,0 +1,23 @@
+[project]
+name = 'Scholarship-Trust-Fund-with-Proof-of-Learning'
+description = ''
+authors = []
+telemetry = true
+cache_dir = '.\.cache'
+requirements = []
+[contracts.Scholarship-Trust-Fund-with-Proof-of-Learning]
+path = 'contracts/Scholarship-Trust-Fund-with-Proof-of-Learning.clar'
+clarity_version = 3
+epoch = 3.1
+[repl.analysis]
+passes = ['check_checker']
+
+[repl.analysis.check_checker]
+strict = false
+trusted_sender = false
+trusted_caller = false
+callee_filter = false
+
+[repl.remote_data]
+enabled = false
+api_url = 'https://api.hiro.so'
