@@ -43,6 +43,15 @@
     )
 )
 
+(define-public (unenroll-student)
+    (let ((student-data (unwrap! (map-get? Students tx-sender) ERR-NOT-ENROLLED)))
+        (begin
+            (map-delete Students tx-sender)
+            (ok true)
+        )
+    )
+)
+
 (define-public (donate-to-fund)
     (let ((amount (stx-get-balance tx-sender)))
         (begin
