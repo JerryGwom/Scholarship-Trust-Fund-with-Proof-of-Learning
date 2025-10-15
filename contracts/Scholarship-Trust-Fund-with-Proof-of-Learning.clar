@@ -8,8 +8,9 @@
 (define-data-var fund-pool uint u0)
 (define-data-var admin principal tx-sender)
 (define-data-var expired-fund-pool uint u0)
+(define-data-var contract-paused bool false)
 
-(define-map Students 
+(define-map Students
     principal 
     {enrolled: bool, 
      milestones-completed: uint,
@@ -31,6 +32,7 @@
 
 (define-public (initialize-milestone (milestone-id uint) (reward uint) (required-proof (string-ascii 64)) (deadline uint))
     (begin
+        (asserts! (not (is-contract-paused)) ERR-NOT-AUTHORIZED)
         (asserts! (is-eq tx-sender (var-get admin)) ERR-NOT-AUTHORIZED)
         (ok (map-set Milestones milestone-id {reward: reward, required-proof: required-proof, deadline: deadline}))
     )
@@ -38,6 +40,7 @@
 
 (define-public (enroll-student (student principal))
     (begin
+        (asserts! (not (is-contract-paused)) ERR-NOT-AUTHORIZED)
         (asserts! (is-eq tx-sender (var-get admin)) ERR-NOT-AUTHORIZED)
         (ok (map-set Students student {enrolled: true, milestones-completed: u0, total-earned: u0}))
     )
@@ -46,6 +49,7 @@
 (define-public (unenroll-student)
     (let ((student-data (unwrap! (map-get? Students tx-sender) ERR-NOT-ENROLLED)))
         (begin
+            (asserts! (not (is-contract-paused)) ERR-NOT-AUTHORIZED)
             (map-delete Students tx-sender)
             (ok true)
         )
@@ -55,6 +59,7 @@
 (define-public (donate-to-fund)
     (let ((amount (stx-get-balance tx-sender)))
         (begin
+            (asserts! (not (is-contract-paused)) ERR-NOT-AUTHORIZED)
             (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
             (var-set fund-pool (+ (var-get fund-pool) amount))
             (ok amount)
@@ -68,21 +73,22 @@
         (milestone-data (unwrap! (map-get? Milestones milestone-id) ERR-INVALID-MILESTONE))
     )
         (begin
+            (asserts! (not (is-contract-paused)) ERR-NOT-AUTHORIZED)
             (asserts! (< stacks-block-height (get deadline milestone-data)) ERR-MILESTONE-EXPIRED)
-            (asserts! (not (get completed (default-to {completed: false, proof-hash: ""} 
+            (asserts! (not (get completed (default-to {completed: false, proof-hash: ""}
                 (map-get? CompletedMilestones {student: tx-sender, milestone-id: milestone-id})))) ERR-ALREADY-CLAIMED)
-            
-            (map-set CompletedMilestones 
+
+            (map-set CompletedMilestones
                 {student: tx-sender, milestone-id: milestone-id}
                 {completed: true, proof-hash: proof-hash}
             )
-            
-            (map-set Students tx-sender 
+
+            (map-set Students tx-sender
                 {enrolled: (get enrolled student-data),
                  milestones-completed: (+ (get milestones-completed student-data) u1),
                  total-earned: (+ (get total-earned student-data) (get reward milestone-data))}
             )
-            
+
             (ok true)
         )
     )
@@ -95,12 +101,13 @@
         (completion-data (unwrap! (map-get? CompletedMilestones {student: tx-sender, milestone-id: milestone-id}) ERR-INVALID-MILESTONE))
     )
         (begin
+            (asserts! (not (is-contract-paused)) ERR-NOT-AUTHORIZED)
             (asserts! (get completed completion-data) ERR-INVALID-MILESTONE)
             (asserts! (>= (var-get fund-pool) (get reward milestone-data)) ERR-INSUFFICIENT-FUNDS)
-            
+
             (try! (as-contract (stx-transfer? (get reward milestone-data) tx-sender tx-sender)))
             (var-set fund-pool (- (var-get fund-pool) (get reward milestone-data)))
-            
+
             (ok (get reward milestone-data))
         )
     )
@@ -123,6 +130,7 @@
         (milestone-data (unwrap! (map-get? Milestones milestone-id) ERR-INVALID-MILESTONE))
     )
         (begin
+            (asserts! (not (is-contract-paused)) ERR-NOT-AUTHORIZED)
             (asserts! (is-eq tx-sender (var-get admin)) ERR-NOT-AUTHORIZED)
             (asserts! (>= stacks-block-height (get deadline milestone-data)) ERR-INVALID-MILESTONE)
             (var-set expired-fund-pool (+ (var-get expired-fund-pool) (get reward milestone-data)))
@@ -134,6 +142,7 @@
 
 (define-public (redistribute-expired-funds (recipient principal) (amount uint))
     (begin
+        (asserts! (not (is-contract-paused)) ERR-NOT-AUTHORIZED)
         (asserts! (is-eq tx-sender (var-get admin)) ERR-NOT-AUTHORIZED)
         (asserts! (<= amount (var-get expired-fund-pool)) ERR-INSUFFICIENT-FUNDS)
         (try! (as-contract (stx-transfer? amount tx-sender recipient)))
@@ -151,4 +160,28 @@
         milestone-data (>= stacks-block-height (get deadline milestone-data))
         true
     )
+)
+
+(define-public (pause-contract)
+    (begin
+        (asserts! (is-eq tx-sender (var-get admin)) (err u100))
+        (var-set contract-paused true)
+        (ok true)
+    )
+)
+
+(define-public (unpause-contract)
+    (begin
+        (asserts! (is-eq tx-sender (var-get admin)) (err u100))
+        (var-set contract-paused false)
+        (ok true)
+    )
+)
+
+(define-private (is-contract-paused)
+    (var-get contract-paused)
+)
+
+(define-read-only (get-contract-paused-status)
+    (var-get contract-paused)
 )

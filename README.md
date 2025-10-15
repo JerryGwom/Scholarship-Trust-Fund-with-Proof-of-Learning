@@ -1,4 +1,4 @@
-# 🎓 Scholarship Trust Fund with Proof-of-Learning
+#  Scholarship Trust Fund with Proof-of-Learning
 
 A decentralized scholarship system that empowers students through verified learning achievements.
 
@@ -9,16 +9,23 @@ A decentralized scholarship system that empowers students through verified learn
 - 🤝 Community-driven donations
 - ⚡ Direct fund transfers
 - ✅ Learning pathway validation
+- 🛡️ Emergency pause mechanism for enhanced security
+- 🔄 Flexible contract management with pause/unpause capabilities
 
 ## 🔧 Smart Contract Functions
 
 ### For Administrators
 - `initialize-milestone`: Create new learning milestones
 - `enroll-student`: Add students to the program
+- `pause-contract`: Temporarily halt all contract operations
+- `unpause-contract`: Resume contract operations
+- `expire-milestone`: Remove expired milestones and reclaim funds
+- `redistribute-expired-funds`: Distribute expired milestone funds
 
 ### For Students
 - `submit-milestone`: Submit proof of learning completion
 - `claim-reward`: Receive scholarship funds for completed milestones
+- `unenroll-student`: Remove oneself from the program
 
 ### For Donors
 - `donate-to-fund`: Contribute STX to the scholarship pool
@@ -27,6 +34,9 @@ A decentralized scholarship system that empowers students through verified learn
 - `get-student-info`: View student progress
 - `get-milestone-info`: Check milestone details
 - `get-fund-balance`: View total available funds
+- `get-expired-fund-balance`: View expired funds available for redistribution
+- `is-milestone-expired`: Check if a milestone has passed its deadline
+- `get-contract-paused-status`: Check if contract operations are paused
 
 ## 🚀 Getting Started
 
