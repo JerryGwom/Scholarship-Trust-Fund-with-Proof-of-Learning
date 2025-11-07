@@ -178,6 +178,14 @@
     )
 )
 
+(define-public (transfer-admin (new-admin principal))
+    (begin
+        (asserts! (is-eq tx-sender (var-get admin)) ERR-NOT-AUTHORIZED)
+        (var-set admin new-admin)
+        (ok true)
+    )
+)
+
 (define-private (is-contract-paused)
     (var-get contract-paused)
 )

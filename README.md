@@ -21,6 +21,7 @@ A decentralized scholarship system that empowers students through verified learn
 - `unpause-contract`: Resume contract operations
 - `expire-milestone`: Remove expired milestones and reclaim funds
 - `redistribute-expired-funds`: Distribute expired milestone funds
+- `transfer-admin`: Transfer administrative privileges to a new principal
 
 ### For Students
 - `submit-milestone`: Submit proof of learning completion
