@@ -68,6 +68,34 @@ A decentralized scholarship system that empowers students through verified learn
 MIT
 ```
 
+## 🚀 New Features
+
+### Bulk Milestone Submission
+
+This innovative feature empowers students to submit proofs for up to 10 milestones in a single transaction, dramatically reducing transaction costs and enhancing the overall user experience in the proof-of-learning ecosystem.
+
+**Function:** `bulk-submit-milestones`
+
+**Parameters:**
+- `milestone-ids`: A list of up to 10 milestone IDs to submit proofs for
+- `proof-hashes`: A corresponding list of proof hashes for each milestone
+
+**Key Benefits:**
+- ⚡ Reduced gas fees through batch processing
+- 📈 Improved efficiency for students with multiple achievements
+- 🛡️ Maintains full security validations per milestone
+- 🔄 Seamless integration with existing contract logic
+
+**Usage Example:**
+```clarity
+;; Submit proofs for two milestones at once
+(contract-call? .scholarship-fund bulk-submit-milestones
+  (list u1 u2)
+  (list "QmHash123..." "QmHash456..."))
+```
+
+This addition positions our scholarship contract at the forefront of educational blockchain solutions, prioritizing accessibility and cost-effectiveness. #BulkOperations #SmartContractEfficiency #EducationalBlockchain
+
 Git commit message:
 ```
 feat: Implement Scholarship Trust Fund with Proof-of-Learning MVP

@@ -186,10 +186,37 @@
     )
 )
 
+(define-public (bulk-submit-milestones (milestone-ids (list 10 uint)) (proof-hashes (list 10 (string-ascii 64))))
+  (begin
+    (asserts! (is-eq (len milestone-ids) (len proof-hashes)) ERR-INVALID-MILESTONE)
+    (asserts! (not (is-contract-paused)) ERR-NOT-AUTHORIZED)
+    (let ((student-data (unwrap! (map-get? Students tx-sender) ERR-NOT-ENROLLED)))
+      (let ((result (fold process-single milestone-ids {student-data: student-data, hashes: proof-hashes, index: u0, failed: false})))
+        (asserts! (not (get failed result)) ERR-INVALID-MILESTONE)
+        (map-set Students tx-sender (get student-data result))
+        (ok true)
+      )
+    )
+  )
+)
+
 (define-private (is-contract-paused)
     (var-get contract-paused)
 )
 
 (define-read-only (get-contract-paused-status)
     (var-get contract-paused)
+)
+
+(define-private (process-single (milestone-id uint) (acc {student-data: {enrolled: bool, milestones-completed: uint, total-earned: uint}, hashes: (list 10 (string-ascii 64)), index: uint, failed: bool}))
+  (let ((proof-hash (unwrap-panic (element-at (get hashes acc) (get index acc))))
+        (milestone-data (unwrap-panic (map-get? Milestones milestone-id))))
+    (if (and (< stacks-block-height (get deadline milestone-data)) (not (get completed (default-to {completed: false, proof-hash: ""} (map-get? CompletedMilestones {student: tx-sender, milestone-id: milestone-id})))))
+      (begin
+        (map-set CompletedMilestones {student: tx-sender, milestone-id: milestone-id} {completed: true, proof-hash: proof-hash})
+        {student-data: {enrolled: (get enrolled (get student-data acc)), milestones-completed: (+ (get milestones-completed (get student-data acc)) u1), total-earned: (+ (get total-earned (get student-data acc)) (get reward milestone-data))}, hashes: (get hashes acc), index: (+ (get index acc) u1), failed: false}
+      )
+      {student-data: (get student-data acc), hashes: (get hashes acc), index: (get index acc), failed: true}
+    )
+  )
 )
